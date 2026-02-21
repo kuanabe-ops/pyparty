@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>派對猜題遊戲</title>
+    <style>
+        :root {
+            /* 低飽和暖色調 */
+            --primary: #D4A373; /* 沙棕色 */
+            --primary-dark: #B58455;
+            --success: #A3B18A; /* 灰綠色 (用於答對) */
+            --danger: #E28F83;  /* 莫蘭迪橘紅 (用於答錯/警告) */
+            --warning: #E9C46A; /* 暖黃色 */
+            --dark: #5C4A4D;    /* 深棕灰 (文字) */
+            --light: #FAF3E0;   /* 暖象牙白 (背景) */
+            --white: #FFFFFF;
+            --border-radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--light);
+            color: var(--dark);
+            overscroll-behavior-y: none;
+        }
+
+        /* 畫面容器 */
+        .screen {
+            display: none;
+            padding: 24px 20px;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        .screen.active {
+            display: flex;
+        }
+
+        h1, h2, h3, h4 {
+            text-align: center;
+            margin-top: 0;
+            color: var(--dark);
+        }
+
+        /* 按鈕樣式 */
+        button {
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 8px 0;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 6px rgba(92, 74, 77, 0.1);
+        }
+        button:active {
+            transform: scale(0.98);
+            opacity: 0.8;
+        }
+        button.btn-success { background-color: var(--success); }
+        button.btn-danger { background-color: var(--danger); }
+        button.btn-warning { background-color: var(--warning); color: var(--dark); }
+        button.btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); box-shadow: none; }
+
+        /* 輸入框樣式 */
+        input, select {
+            width: 100%;
+            padding: 14px;
+            margin: 8px 0 16px;
+            border: 2px solid #E0D5C1;
+            border-radius: 12px;
+            font-size: 16px;
+            background-color: var(--white);
+            color: var(--dark);
+            outline: none;
+        }
+        input:focus, select:focus {
+            border-color: var(--primary);
+        }
+
+        /* 戰況區塊 */
+        .scoreboard {
+            background: var(--white);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .score-item {
+            background: var(--light);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #E0D5C1;
+        }
+        .score-item.active-group {
+            background: var(--warning);
+            border-color: var(--warning);
+            color: var(--dark);
+        }
+
+        /* 遊戲畫面區塊 */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
+            padding: 20px;
+        }
+        .timer-display {
+            font-size: 56px;
+            font-weight: bold;
+            color: var(--danger);
+            margin-bottom: 20px;
+            font-variant-numeric: tabular-nums;
+        }
+        .word-display {
+            font-size: 60px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 80px;
+            word-break: keep-all;
+        }
+
+        /* 遊戲按鈕區塊 */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+        }
+        .action-buttons button {
+            flex: 1;
+            height: 110px;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        /* 倒數遮罩 */
+        #countdown-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(92, 74, 77, 0.9);
+            color: var(--warning);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-size: 150px;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        /* 結算列表與互動標籤 */
+        .result-container {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
+            flex: 1;
+            overflow-y: auto;
+        }
+        .word-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .word-chip {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            user-select: none;
+        }
+        .word-chip:active { transform: scale(0.9); }
+        .chip-correct { background-color: var(--success); color: white; }
+        .chip-wrong { background-color: var(--danger); color: white; }
+        
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .text-correct { color: var(--success); }
+        .text-danger { color: var(--danger); }
+
+        .flex-spacer { flex: 1; }
+        
+        /* 純計分微調區塊 */
+        .score-adjuster {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            font-size: 40px;
+            font-weight: bold;
+            margin: 30px 0;
+        }
+        .score-adjuster button {
+            width: 60px;
+            height: 60px;
+            border-radius: 30px;
+            font-size: 30px;
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="countdown-overlay">3</div>
+
+    <div id="screen-home" class="screen active">
+        <div class="flex-spacer"></div>
+        <h1 style="font-size: 36px; margin-bottom: 40px;">🦓PY派對🦒</h1>
+        <button onclick="startGroupSetup()">建立組別</button>
+        <button class="btn-warning" onclick="startQuickGame()">直接開始</button>
+        <div class="flex-spacer"></div>
+    </div>
+
+    <div id="screen-setup-participants" class="screen">
+        <h2>參與人員設定</h2>
+        <label>參與總人數：</label>
+        <input type="number" id="participant-count" min="2" max="20" value="4" onchange="generateNameInputs()" inputmode="numeric">
+        <div id="name-inputs-container" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        <div class="flex-spacer"></div>
+        <button onclick="goToAssignMethod()">下一步</button>
+        <button class="btn-outline" onclick="showScreen('screen-home')">返回</button>
+    </div>
+
+    <div id="screen-setup-method" class="screen">
+        <h2>選擇分組方式</h2>
+        <div class="flex-spacer"></div>
+        <button onclick="showCustomSetup()">自定義組員</button>
+        <button class="btn-warning" onclick="showRandomSetup()">隨機抽籤分組</button>
+        <div class="flex-spacer"></div>
+        <button class="btn-outline" onclick="showScreen('screen-setup-participants')">上一步</button>
+    </div>
+
+    <div id="screen-setup-custom" class="screen">
+        <h2>自定義組別</h2>
+        <label>分成幾組？</label>
+        <input type="number" id="custom-group-count" min="2" max="10" value="2" onchange="renderCustomAssignment()" inputmode="numeric">
+        <div id="custom-assignment-container" style="max-height: 50vh; overflow-y: auto;"></div>
+        <div class="flex-spacer"></div>
+        <button onclick="finishCustomSetup()">完成分組</button>
+        <button class="btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
+    </div>
+
+    <div id="screen-setup-random" class="screen">
+        <h2>抽籤分組</h2>
+        <label>分成幾組？</label>
+        <input type="number" id="random-group-count" min="2" max="10" value="2" onchange="renderRandomSizeInputs()" inputmode="numeric">
+        <div id="random-size-container" style="max-height: 50vh; overflow-y: auto;"></div>
+        <div class="flex-spacer"></div>
+        <button onclick="finishRandomSetup()" class="btn-warning">開始抽籤</button>
+        <button class="btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
+    </div>
+
+    <div id="screen-game-settings" class="screen">
+        <h2>遊戲設定</h2>
+        
+        <div id="settings-scoreboard" class="scoreboard" style="display: none;"></div>
+
+        <label>選擇主題：</label>
+        <select id="theme-select" onchange="toggleTimeInput()">
+            <option value="人名">人名</option>
+            <option value="地名">地名</option>
+            <option value="動植物">動植物</option>
+            <option value="成語">成語</option>
+            <option value="娛樂">娛樂 </option>
+            <option value="飲食">飲食</option>
+            <option value="職業">職業</option>
+            <option value="品牌">品牌</option>
+            <option value="抽象">抽象詞彙</option>
+            <option value="純計分" id="theme-pure-score">純計分</option>
+        </select>
+
+        <div id="time-setting-group">
+            <label>設定秒數：</label>
+            <input type="number" id="time-input" value="60" min="10" max="600" inputmode="numeric">
+        </div>
+
+        <h3 id="current-turn-display" style="color: var(--primary-dark); margin-top: 15px; padding: 10px; background: var(--white); border-radius: 12px;"></h3>
+
+        <div class="flex-spacer"></div>
+        <button class="btn-success" onclick="startGameplay()">開始遊戲</button>
+        <button class="btn-outline" onclick="backToHome()">回到首頁</button>
+    </div>
+
+    <div id="screen-gameplay" class="screen">
+        <div id="gameplay-scoreboard" class="scoreboard" style="display: none;"></div>
+
+        <div class="game-area">
+            <div class="timer-display" id="game-timer">01:00</div>
+            <div class="word-display" id="game-word">準備中...</div>
+            <button id="btn-end-pure" class="btn-warning" style="display:none; height: 60px; font-size: 20px; width: 80%;" onclick="endGameplay()">結束統計</button>
+        </div>
+
+        <div class="action-buttons" id="game-action-buttons">
+            <button class="btn-danger" onclick="recordAnswer(false)" id="btn-wrong">答錯 / Pass</button>
+            <button class="btn-success" onclick="recordAnswer(true)" id="btn-correct">答對</button>
+        </div>
+    </div>
+
+    <div id="screen-summary" class="screen">
+        <h2 id="summary-title">回合結算</h2>
+        <h3 id="summary-group-name" style="color: var(--primary-dark); margin-bottom: 20px;"></h3>
+        
+        <div class="result-container" id="summary-word-list">
+            <div class="summary-stats">
+                <span class="text-correct">答對：<span id="summary-correct-count">0</span></span>
+                <span class="text-danger">答錯：<span id="summary-wrong-count">0</span></span>
+            </div>
+            <p style="text-align: center; font-size: 14px; color: #888; margin-bottom: 15px;">💡 點擊下方標籤可手動修改答對/答錯狀態</p>
+            
+            <h4 class="text-correct" style="text-align: left;">答對區 (點擊移至答錯)：</h4>
+            <div class="word-pool" id="list-correct"></div>
+            
+            <h4 class="text-danger" style="text-align: left; margin-top: 20px;">答錯區 (點擊移至答對)：</h4>
+            <div class="word-pool" id="list-wrong"></div>
+        </div>
+
+        <div class="result-container" id="summary-pure-score-info" style="display:none;">
+            <p style="text-align: center; font-size: 16px; color: #888;">微調本回合獲得分數</p>
+            <div class="score-adjuster">
+                <button class="btn-danger" onclick="adjustPureScore(-1)">-</button>
+                <span id="summary-pure-score-val" style="min-width: 60px; text-align: center;">0</span>
+                <button class="btn-success" onclick="adjustPureScore(1)">+</button>
+            </div>
+        </div>
+
+        <button class="btn-warning" style="font-size: 20px; padding: 18px;" onclick="confirmSummary()">確認結算</button>
+    </div>
+
+    <script>
+        // --- 讀取外部題庫檔案 ---
+        let wordBank = {};
+
+        async function loadWordBank() {
+            try {
+                const response = await fetch('questions.json');
+                if (!response.ok) throw new Error('無法讀取 questions.json');
+                wordBank = await response.json();
+            } catch (err) {
+                console.error('題庫載入失敗:', err);
+                alert('載入題庫失敗，請確認同目錄下是否有 questions.json 檔案。');
+            }
+        }
+        
+        // 初始載入
+        loadWordBank();
+
+        // --- 全域狀態 ---
+        let state = {
+            mode: 'quick', 
+            participants: [],
+            groups: [], 
+            currentGroupIndex: 0,
+            currentTheme: '',
+            timeLimit: 60,
+            timer: null,
+            timeLeft: 0,
+            currentWords: [],
+            roundData: { correct: [], wrong: [], scoreDelta: 0 }
+        };
+
+        // --- 畫面切換與功能 ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        function toggleTimeInput() {
+            const isPure = document.getElementById('theme-select').value === '純計分';
+            document.getElementById('time-setting-group').style.display = isPure ? 'none' : 'block';
+        }
+
+        // --- 首頁邏輯 ---
+        function startQuickGame() {
+            state.mode = 'quick';
+            state.groups = [];
+            document.getElementById('theme-pure-score').disabled = true;
+            document.getElementById('settings-scoreboard').style.display = 'none';
+            document.getElementById('current-turn-display').style.display = 'none';
+            document.getElementById('theme-select').value = '人名';
+            toggleTimeInput();
+            showScreen('screen-game-settings');
+        }
+
+        function startGroupSetup() {
+            state.mode = 'group';
+            document.getElementById('theme-pure-score').disabled = false;
+            generateNameInputs();
+            showScreen('screen-setup-participants');
+        }
+
+        // --- 參與者設定邏輯 ---
+        function generateNameInputs() {
+            const count = parseInt(document.getElementById('participant-count').value) || 4;
+            const container = document.getElementById('name-inputs-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                container.innerHTML += `<input type="text" id="participant-${i}" placeholder="成員 ${i} 的名稱" value="玩家 ${i}">`;
+            }
+        }
+
+        function goToAssignMethod() {
+            const count = parseInt(document.getElementById('participant-count').value);
+            state.participants = [];
+            for (let i = 1; i <= count; i++) {
+                const name = document.getElementById(`participant-${i}`).value.trim() || `玩家 ${i}`;
+                state.participants.push(name);
+            }
+            showScreen('screen-setup-method');
+        }
+
+        function showCustomSetup() {
+            renderCustomAssignment();
+            showScreen('screen-setup-custom');
+        }
+
+        function renderCustomAssignment() {
+            const groupCount = parseInt(document.getElementById('custom-group-count').value) || 2;
+            const container = document.getElementById('custom-assignment-container');
+            container.innerHTML = '';
+            
+            let groupOptions = '';
+            for(let g = 1; g <= groupCount; g++) {
+                groupOptions += `<option value="${g}">第 ${g} 組</option>`;
+            }
+
+            state.participants.forEach((p, index) => {
+                container.innerHTML += `
+                    <div style="display:flex; align-items:center; margin-bottom:10px; gap:10px;">
+                        <div style="flex:1; font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p}</div>
+                        <select id="assign-${index}" style="flex:2; margin:0;">
+                            ${groupOptions}
+                        </select>
+                    </div>
+                `;
+            });
+        }
+
+        function finishCustomSetup() {
+            const groupCount = parseInt(document.getElementById('custom-group-count').value) || 2;
+            state.groups = Array.from({length: groupCount}, (_, i) => ({ name: `第 ${i+1} 組`, members: [], score: 0 }));
+            
+            state.participants.forEach((p, index) => {
+                const gIndex = parseInt(document.getElementById(`assign-${index}`).value) - 1;
+                state.groups[gIndex].members.push(p);
+            });
+
+            if(state.groups.some(g => g.members.length === 0)) {
+                alert('每組至少需要一名成員！');
+                return;
+            }
+            initGameSettings();
+        }
+
+        function showRandomSetup() {
+            renderRandomSizeInputs();
+            showScreen('screen-setup-random');
+        }
+
+        function renderRandomSizeInputs() {
+            const groupCount = parseInt(document.getElementById('random-group-count').value) || 2;
+            const container = document.getElementById('random-size-container');
+            container.innerHTML = `<p style="color:var(--danger); font-size:16px; font-weight:bold;">總人數：${state.participants.length} 人</p>`;
+            
+            const baseSize = Math.floor(state.participants.length / groupCount);
+            let remainder = state.participants.length % groupCount;
+
+            for(let g = 1; g <= groupCount; g++) {
+                let defaultSize = baseSize + (remainder > 0 ? 1 : 0);
+                if(remainder > 0) remainder--;
+                
+                container.innerHTML += `
+                    <div style="display:flex; align-items:center; margin-bottom:10px; gap:10px;">
+                        <label style="flex:1; white-space: nowrap;">第 ${g} 組人數：</label>
+                        <input type="number" id="random-size-${g}" min="1" max="${state.participants.length}" value="${defaultSize}" style="flex:1; margin:0;" inputmode="numeric">
+                    </div>
+                `;
+            }
+        }
+
+        function finishRandomSetup() {
+            const groupCount = parseInt(document.getElementById('random-group-count').value);
+            let sizes = [];
+            let totalSize = 0;
+            
+            for(let g = 1; g <= groupCount; g++) {
+                const s = parseInt(document.getElementById(`random-size-${g}`).value);
+                sizes.push(s);
+                totalSize += s;
+            }
+
+            if(totalSize !== state.participants.length) {
+                alert(`分組人數總和 (${totalSize}) 必須等於總參與人數 (${state.participants.length})！`);
+                return;
+            }
+
+            let shuffled = [...state.participants].sort(() => 0.5 - Math.random());
+            state.groups = [];
+            let currentIndex = 0;
+
+            sizes.forEach((size, i) => {
+                state.groups.push({
+                    name: `第 ${i+1} 組`,
+                    members: shuffled.slice(currentIndex, currentIndex + size),
+                    score: 0
+                });
+                currentIndex += size;
+            });
+
+            let groupAlertInfo = state.groups.map(g => `${g.name}: ${g.members.join(', ')}`).join('\n');
+            alert("🎯 抽籤完成！\n\n" + groupAlertInfo);
+            initGameSettings();
+        }
+
+        // --- 遊戲設定 ---
+        function initGameSettings() {
+            state.currentGroupIndex = 0;
+            document.getElementById('theme-select').value = '人名';
+            toggleTimeInput();
+            updateScoreboards();
+            document.getElementById('settings-scoreboard').style.display = 'flex';
+            document.getElementById('current-turn-display').style.display = 'block';
+            updateCurrentTurnText();
+            showScreen('screen-game-settings');
+        }
+
+        function updateScoreboards() {
+            if(state.mode !== 'group') return;
+            let html = state.groups.map((g, i) => `
+                <div class="score-item ${i === state.currentGroupIndex ? 'active-group' : ''}">
+                    ${g.name}: ${g.score} 分
+                </div>
+            `).join('');
+            document.getElementById('settings-scoreboard').innerHTML = html;
+            document.getElementById('gameplay-scoreboard').innerHTML = html;
+        }
+
+        function updateCurrentTurnText() {
+            if(state.mode === 'group') {
+                const group = state.groups[state.currentGroupIndex];
+                document.getElementById('current-turn-display').innerText = `👉 現在輪到：${group.name}\n(${group.members.join(', ')})`;
+            }
+        }
+
+        function backToHome() {
+            if (state.mode === 'group') {
+                if (!confirm("⚠️ 確定要回到首頁嗎？\n所有的分組資料與分數都將被清除！")) return;
+            }
+            clearInterval(state.timer);
+            showScreen('screen-home');
+        }
+
+        // --- 遊戲進行 ---
+        function startGameplay() {
+            state.currentTheme = document.getElementById('theme-select').value;
+            state.timeLimit = parseInt(document.getElementById('time-input').value) || 60;
+            state.roundData = { correct: [], wrong: [], scoreDelta: 0 };
+            
+            const isPureScore = state.currentTheme === '純計分';
+
+            if (!isPureScore) {
+                const rawWords = wordBank[state.currentTheme] || [];
+                state.currentWords = [...rawWords].sort(() => 0.5 - Math.random());
+                document.getElementById('btn-correct').innerText = "答對";
+                document.getElementById('btn-wrong').innerText = "答錯 / Pass";
+                document.getElementById('game-action-buttons').style.display = 'flex';
+                document.getElementById('btn-end-pure').style.display = 'none';
+                document.getElementById('game-timer').style.display = 'block';
+            } else {
+                document.getElementById('btn-correct').innerText = "+1 分";
+                document.getElementById('btn-wrong').innerText = "-1 分";
+                document.getElementById('game-action-buttons').style.display = 'flex';
+                document.getElementById('btn-end-pure').style.display = 'block';
+                document.getElementById('game-timer').style.display = 'none'; // 純計分不顯示秒數
+            }
+
+            if(state.mode === 'group') {
+                document.getElementById('gameplay-scoreboard').style.display = 'flex';
+                updateScoreboards();
+            } else {
+                document.getElementById('gameplay-scoreboard').style.display = 'none';
+            }
+
+            showScreen('screen-gameplay');
+            startCountdown(isPureScore);
+        }
+
+        function startCountdown(isPureScore) {
+            const overlay = document.getElementById('countdown-overlay');
+            overlay.style.display = 'flex';
+            let count = 3;
+            overlay.innerText = count;
+
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    overlay.innerText = count;
+                } else if (count === 0) {
+                    overlay.innerText = "GO!";
+                } else {
+                    clearInterval(countInterval);
+                    overlay.style.display = 'none';
+                    if (!isPureScore) {
+                        startTimer();
+                    }
+                    nextWord();
+                }
+            }, 1000);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        }
+
+        function startTimer() {
+            state.timeLeft = state.timeLimit;
+            document.getElementById('game-timer').innerText = formatTime(state.timeLeft);
+            
+            state.timer = setInterval(() => {
+                state.timeLeft--;
+                document.getElementById('game-timer').innerText = formatTime(state.timeLeft);
+                
+                if (state.timeLeft <= 0) {
+                    clearInterval(state.timer);
+                    endGameplay();
+                }
+            }, 1000);
+        }
+
+        function nextWord() {
+            if (state.currentTheme === '純計分') {
+                document.getElementById('game-word').innerText = "計分模式";
+                return;
+            }
+
+            if (state.currentWords.length === 0) {
+                document.getElementById('game-word').innerText = "⚠️ 題目已用盡";
+                return;
+            }
+            document.getElementById('game-word').innerText = state.currentWords[0];
+        }
+
+        function recordAnswer(isCorrect) {
+            if (state.currentTheme !== '純計分' && state.timeLeft <= 0) return;
+
+            if (state.currentTheme === '純計分') {
+                state.roundData.scoreDelta += isCorrect ? 1 : -1;
+                const wordEl = document.getElementById('game-word');
+                wordEl.innerText = isCorrect ? "+1" : "-1";
+                wordEl.style.color = isCorrect ? "var(--success)" : "var(--danger)";
+                setTimeout(() => { wordEl.style.color = "var(--dark)"; wordEl.innerText = "計分模式"; }, 300);
+                return;
+            }
+
+            if (state.currentWords.length === 0) return;
+
+            const word = state.currentWords.shift();
+            if (isCorrect) {
+                state.roundData.correct.push(word);
+            } else {
+                state.roundData.wrong.push(word);
+            }
+            nextWord();
+        }
+
+        // --- 結算與微調 ---
+        function endGameplay() {
+            const isGroup = state.mode === 'group';
+            const isPureScore = state.currentTheme === '純計分';
+
+            document.getElementById('summary-group-name').innerText = isGroup ? state.groups[state.currentGroupIndex].name : "玩家";
+            
+            if (isPureScore) {
+                document.getElementById('summary-pure-score-info').style.display = 'block';
+                document.getElementById('summary-word-list').style.display = 'none';
+                updatePureScoreDisplay();
+            } else {
+                document.getElementById('summary-pure-score-info').style.display = 'none';
+                document.getElementById('summary-word-list').style.display = 'flex';
+                document.getElementById('summary-word-list').style.flexDirection = 'column';
+                renderSummaryWords();
+            }
+
+            showScreen('screen-summary');
+        }
+
+        function renderSummaryWords() {
+            const correctContainer = document.getElementById('list-correct');
+            const wrongContainer = document.getElementById('list-wrong');
+            
+            correctContainer.innerHTML = state.roundData.correct.map(w => 
+                `<span class="word-chip chip-correct" onclick="toggleWordStatus('${w}', true)">${w}</span>`
+            ).join('');
+            
+            wrongContainer.innerHTML = state.roundData.wrong.map(w => 
+                `<span class="word-chip chip-wrong" onclick="toggleWordStatus('${w}', false)">${w}</span>`
+            ).join('');
+            
+            document.getElementById('summary-correct-count').innerText = state.roundData.correct.length;
+            document.getElementById('summary-wrong-count').innerText = state.roundData.wrong.length;
+        }
+
+        function toggleWordStatus(word, isCurrentlyCorrect) {
+            if (isCurrentlyCorrect) {
+                state.roundData.correct = state.roundData.correct.filter(w => w !== word);
+                state.roundData.wrong.push(word);
+            } else {
+                state.roundData.wrong = state.roundData.wrong.filter(w => w !== word);
+                state.roundData.correct.push(word);
+            }
+            renderSummaryWords();
+        }
+
+        function adjustPureScore(amount) {
+            state.roundData.scoreDelta += amount;
+            updatePureScoreDisplay();
+        }
+
+        function updatePureScoreDisplay() {
+            const valEl = document.getElementById('summary-pure-score-val');
+            valEl.innerText = state.roundData.scoreDelta;
+            valEl.style.color = state.roundData.scoreDelta >= 0 ? "var(--success)" : "var(--danger)";
+        }
+
+        function confirmSummary() {
+            if (state.mode === 'group') {
+                if (state.currentTheme === '純計分') {
+                    state.groups[state.currentGroupIndex].score += state.roundData.scoreDelta;
+                } else {
+                    // 一般模式：答對幾題得幾分
+                    state.groups[state.currentGroupIndex].score += state.roundData.correct.length;
+                }
+                state.currentGroupIndex = (state.currentGroupIndex + 1) % state.groups.length;
+                updateScoreboards();
+                updateCurrentTurnText();
+                showScreen('screen-game-settings');
+            } else {
+                showScreen('screen-game-settings');
+            }
+        }
+    </script>
+</body>
+</html>
