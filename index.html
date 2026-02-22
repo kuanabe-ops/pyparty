@@ -27,7 +27,7 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: var(--light);
+            background: linear-gradient(135deg, #F5EBDD, #EADBC8);
             color: var(--dark);
             overscroll-behavior-y: none;
         }
@@ -51,7 +51,7 @@
 
         /* 按鈕樣式 */
         button {
-            background-color: var(--primary);
+            background: linear-gradient(145deg, #D4A373, #C28A5F);
             color: var(--white);
             border: none;
             border-radius: var(--border-radius);
@@ -62,16 +62,18 @@
             cursor: pointer;
             width: 100%;
             transition: opacity 0.2s, transform 0.1s;
-            box-shadow: 0 4px 6px rgba(92, 74, 77, 0.1);
+            box-shadow: 
+                0 8px 20px rgba(0,0,0,0.08),
+                inset 0 1px 0 rgba(255,255,255,0.3);
         }
         button:active {
-            transform: scale(0.98);
-            opacity: 0.8;
+            transform: scale(0.97);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        button.btn-success { background-color: var(--success); }
-        button.btn-danger { background-color: var(--danger); }
-        button.btn-warning { background-color: var(--warning); color: var(--dark); }
-        button.btn-outline { background-color: transparent; border: 2px solid var(--primary); color: var(--primary); box-shadow: none; }
+        button.btn-success { background: var(--success); }
+        button.btn-danger { background: var(--danger); }
+        button.btn-warning { background: var(--warning); color: var(--dark); }
+        button.btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); box-shadow: none; }
 
         /* 輸入框樣式 */
         input, select {
@@ -91,23 +93,28 @@
 
         /* 戰況區塊 */
         .scoreboard {
-            background: var(--white);
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
             padding: 15px;
             border-radius: var(--border-radius);
             margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
             justify-content: center;
         }
         .score-item {
-            background: var(--light);
+            background: rgba(255,255,255,0.7);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.6);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
             padding: 8px 15px;
             border-radius: 20px;
             font-weight: bold;
             font-size: 14px;
-            border: 1px solid #E0D5C1;
         }
         .score-item.active-group {
             background: var(--warning);
@@ -122,22 +129,28 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: var(--white);
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
             border-radius: var(--border-radius);
             margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
             padding: 20px;
         }
         .timer-display {
-            font-size: 56px;
-            font-weight: bold;
-            color: var(--danger);
+            font-size: 64px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: #C97C5D;
+            text-shadow: 0 4px 15px rgba(201,124,93,0.25);
             margin-bottom: 20px;
             font-variant-numeric: tabular-nums;
         }
         .word-display {
-            font-size: 60px;
-            font-weight: bold;
+            font-size: 72px;
+            font-weight: 800;
+            letter-spacing: 4px;
             text-align: center;
             margin-bottom: 20px;
             min-height: 80px;
@@ -173,11 +186,14 @@
 
         /* 結算列表與互動標籤 */
         .result-container {
-            background: var(--white);
+            background: rgba(255,255,255,0.65);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
             border-radius: var(--border-radius);
             padding: 20px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(92, 74, 77, 0.05);
             flex: 1;
             overflow-y: auto;
         }
@@ -229,6 +245,14 @@
             font-size: 30px;
             padding: 0;
             margin: 0;
+        }
+        
+        /* 置頂結算按鈕樣式 */
+        .confirm-btn-top {
+            font-size: 20px;
+            padding: 18px;
+            margin-bottom: 15px;
+            box-shadow: 0 8px 20px rgba(212,163,115,0.25);
         }
     </style>
 </head>
@@ -307,7 +331,7 @@
             <input type="number" id="time-input" value="60" min="10" max="600" inputmode="numeric">
         </div>
 
-        <h3 id="current-turn-display" style="color: var(--primary-dark); margin-top: 15px; padding: 10px; background: var(--white); border-radius: 12px;"></h3>
+        <h3 id="current-turn-display" style="color: var(--primary-dark); margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.65); border-radius: 12px; backdrop-filter: blur(14px);"></h3>
 
         <div class="flex-spacer"></div>
         <button class="btn-success" onclick="startGameplay()">開始遊戲</button>
@@ -333,6 +357,8 @@
         <h2 id="summary-title">回合結算</h2>
         <h3 id="summary-group-name" style="color: var(--primary-dark); margin-bottom: 20px;"></h3>
         
+        <button class="btn-warning confirm-btn-top" onclick="confirmSummary()">確認結算</button>
+        
         <div class="result-container" id="summary-word-list">
             <div class="summary-stats">
                 <span class="text-correct">答對：<span id="summary-correct-count">0</span></span>
@@ -355,8 +381,6 @@
                 <button class="btn-success" onclick="adjustPureScore(1)">+</button>
             </div>
         </div>
-
-        <button class="btn-warning" style="font-size: 20px; padding: 18px;" onclick="confirmSummary()">確認結算</button>
     </div>
 
     <script>
@@ -647,6 +671,7 @@
             return `${m}:${s}`;
         }
 
+        // 🔥 新增：時間到後將停在畫面的題目自動歸類到「答錯區」
         function startTimer() {
             state.timeLeft = state.timeLimit;
             document.getElementById('game-timer').innerText = formatTime(state.timeLeft);
@@ -657,6 +682,13 @@
                 
                 if (state.timeLeft <= 0) {
                     clearInterval(state.timer);
+                    
+                    // 如果還有題目停在畫面上，且沒被記錄
+                    if (state.currentTheme !== '純計分' && state.currentWords.length > 0) {
+                        const lastWord = state.currentWords.shift();
+                        state.roundData.wrong.push(lastWord);
+                    }
+
                     endGameplay();
                 }
             }, 1000);
