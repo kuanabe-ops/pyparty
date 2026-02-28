@@ -2,467 +2,654 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>派對猜題遊戲</title>
-	<link rel="icon" type="image/png" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>zebra party</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,800&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* 低飽和暖色調 */
-            --primary: #D4A373; /* 沙棕色 */
-            --primary-dark: #B58455;
-            --success: #A3B18A; /* 灰綠色 (用於答對) */
-            --danger: #E28F83;  /* 莫蘭迪橘紅 (用於答錯/警告) */
-            --warning: #E9C46A; /* 暖黃色 */
-            --dark: #5C4A4D;    /* 深棕灰 (文字) */
-            --light: #FAF3E0;   /* 暖象牙白 (背景) */
-            --white: #FFFFFF;
-            --border-radius: 16px;
+            --primary-bg: #0a0a0c;
+            --accent-purple: #c084fc;
+            --accent-gold: #fbbf24;
+            --danger-red: #ef4444;
+            --success-green: #22c55e;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --text-main: #ffffff;
+            /* 統一按鈕尺寸變數 - 已縮小至接近 score-pill 大小 */
+            --btn-height: 40px;
+            --btn-font-size: 14px;
+            --btn-radius: 20px;
         }
 
         * {
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            font-family: "PingFang TC", "Heiti TC", "Microsoft JhengHei", sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #F5EBDD, #EADBC8);
-            color: var(--dark);
-            overscroll-behavior-y: none;
+            background-color: var(--primary-bg);
+            color: var(--text-main);
+            height: 100dvh;
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
         }
 
-        /* 畫面容器 */
+        /* 🎬 全局流光背景 */
+        .bg-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(192, 132, 252, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(251, 191, 36, 0.1) 0%, transparent 40%);
+            z-index: -1;
+            animation: bgShift 20s ease infinite alternate;
+        }
+        @keyframes bgShift {
+            from { transform: scale(1) rotate(0deg); }
+            to { transform: scale(1.1) rotate(2deg); }
+        }
+
+        .main-shell {
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(50px);
+            margin: 0 auto;
+        }
+
+        /* 📱 畫面切換 */
         .screen {
             display: none;
-            padding: 24px 20px;
-            min-height: 100vh;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
             flex-direction: column;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         .screen.active {
             display: flex;
+            opacity: 1;
         }
 
-        h1, h2, h3, h4 {
-            text-align: center;
-            margin-top: 0;
-            color: var(--dark);
-        }
-
-        /* 按鈕樣式 */
-        button {
-            background: linear-gradient(145deg, #D4A373, #C28A5F);
-            color: var(--white);
-            border: none;
-            border-radius: var(--border-radius);
-            padding: 16px;
-            font-size: 18px;
-            font-weight: bold;
-            margin: 8px 0;
-            cursor: pointer;
-            width: 100%;
-            transition: opacity 0.2s, transform 0.1s;
-            box-shadow: 
-                0 8px 20px rgba(0,0,0,0.08),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-        }
-        button:active {
-            transform: scale(0.97);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        button.btn-success { background: var(--success); }
-        button.btn-danger { background: var(--danger); }
-        button.btn-warning { background: var(--warning); color: var(--dark); }
-        button.btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); box-shadow: none; }
-
-        /* 輸入框樣式 */
-        input, select {
-            width: 100%;
-            padding: 14px;
-            margin: 8px 0 16px;
-            border: 2px solid #E0D5C1;
-            border-radius: 12px;
-            font-size: 16px;
-            background-color: var(--white);
-            color: var(--dark);
-            outline: none;
-        }
-        input:focus, select:focus {
-            border-color: var(--primary);
-        }
-
-        /* 戰況區塊 */
-        .scoreboard {
-            background: rgba(255,255,255,0.65);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255,255,255,0.4);
-            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
+        .scrollable-content {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
             display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            justify-content: center;
+            flex-direction: column;
+            gap: 15px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-        .score-item {
-            background: rgba(255,255,255,0.7);
-            backdrop-filter: blur(6px);
-            border: 1px solid rgba(255,255,255,0.6);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.05);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-        .score-item.active-group {
-            background: var(--warning);
-            border-color: var(--warning);
-            color: var(--dark);
+        .scrollable-content::-webkit-scrollbar {
+            display: none;
         }
 
-        /* 遊戲畫面區塊 */
-        .game-area {
+        .fixed-bottom-btns {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: row; /* 改為左右排列 */
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        /* 🏠 首頁專屬 */
+        #screen-home {
+            padding: 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .spotlight {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(50px);
+            z-index: -1;
+            animation: moveSpotlight 8s infinite alternate ease-in-out;
+        }
+        .spotlight-1 { width: 250px; height: 250px; background: rgba(251, 191, 36, 0.35); top: -10%; left: -20%; }
+        .spotlight-2 { width: 300px; height: 300px; background: rgba(192, 132, 252, 0.4); bottom: 10%; right: -20%; }
+        .spotlight-3 { width: 200px; height: 200px; background: rgba(239, 68, 68, 0.25); top: 40%; left: 30%; animation: moveSpotlight3 6s infinite alternate ease-in-out; }
+        
+        @keyframes moveSpotlight {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 150px) scale(1.3); }
+        }
+        @keyframes moveSpotlight3 {
+            0% { transform: translate(-50px, -50px) scale(0.8); }
+            100% { transform: translate(80px, 80px) scale(1.5); }
+        }
+
+        .home-top {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: rgba(255,255,255,0.65);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255,255,255,0.4);
-            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            padding: 20px;
-        }
-        .timer-display {
-            font-size: 64px;
-            font-weight: 700;
-            letter-spacing: 2px;
-            color: #C97C5D;
-            text-shadow: 0 4px 15px rgba(201,124,93,0.25);
-            margin-bottom: 20px;
-            font-variant-numeric: tabular-nums;
-        }
-        .word-display {
-            font-size: 72px;
-            font-weight: 800;
-            letter-spacing: 4px;
             text-align: center;
-            margin-bottom: 20px;
-            min-height: 80px;
-            word-break: keep-all;
+            z-index: 1;
         }
-
-        /* 遊戲按鈕區塊 */
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            width: 100%;
-        }
-        .action-buttons button {
-            flex: 1;
-            height: 110px;
-            font-size: 24px;
-            margin: 0;
-        }
-
-        /* 倒數遮罩 */
-        #countdown-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(92, 74, 77, 0.9);
-            color: var(--warning);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            font-size: 150px;
-            font-weight: bold;
-            z-index: 1000;
-        }
-
-        /* 結算列表與互動標籤 */
-        .result-container {
-            background: rgba(255,255,255,0.65);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid rgba(255,255,255,0.4);
-            box-shadow: 0 15px 35px rgba(92, 74, 77, 0.12);
-            border-radius: var(--border-radius);
-            padding: 20px;
-            margin-bottom: 15px;
-            flex: 1;
-            overflow-y: auto;
-        }
-        .word-pool {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .word-chip {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s, opacity 0.2s;
-            user-select: none;
-        }
-        .word-chip:active { transform: scale(0.9); }
-        .chip-correct { background-color: var(--success); color: white; }
-        .chip-wrong { background-color: var(--danger); color: white; }
-        
-        .summary-stats {
-            display: flex;
-            justify-content: space-around;
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .text-correct { color: var(--success); }
-        .text-danger { color: var(--danger); }
-
-        .flex-spacer { flex: 1; }
-        
-        /* 純計分微調區塊 */
-        .score-adjuster {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
+        .home-logo {
+            position: relative; /* 為了讓 ::after 定位 */
+            font-family: 'Playfair Display', serif;
+            font-style: bold;
             font-size: 40px;
-            font-weight: bold;
-            margin: 30px 0;
-        }
-        .score-adjuster button {
-            width: 60px;
-            height: 60px;
-            border-radius: 30px;
-            font-size: 30px;
-            padding: 0;
+            font-weight: 900;
+            letter-spacing: -1px;
             margin: 0;
+            background: linear-gradient(135deg, #fff 20%, var(--accent-gold) 60%, var(--accent-purple) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textGradientPulse 3s infinite alternate, neonGlow 2s infinite alternate;
+        }
+        @keyframes textGradientPulse {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
+        }
+        @keyframes neonGlow {
+            from { text-shadow: 0 10px 30px rgba(192, 132, 252, 0.4); }
+            to { text-shadow: 0 15px 50px rgba(251, 191, 36, 0.7), 0 0 20px rgba(255,255,255,0.3); }
+        }
+
+        /* 🌟 Logo 呼吸光暈加強 */
+        .home-logo::after {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            background: radial-gradient(circle, rgba(192,132,252,0.4), transparent 70%);
+            filter: blur(40px);
+            z-index: -1;
+        }
+
+        /* 💎 卡片樣式 */
+        .glass-panel {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 28px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+        }
+
+        h2 { font-size: 28px; text-align: center; margin: 0 0 20px 0; font-weight: 700; color: var(--accent-gold); flex-shrink: 0; }
+
+        /* 🔘 統一按鈕樣式 */
+        .action-btn {
+            flex: 1; /* 使按鈕在 row 中平分寬度 */
+            width: 100%;
+            height: var(--btn-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--btn-radius);
+            font-size: var(--btn-font-size);
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            flex-shrink: 0;
+            text-decoration: none;
+        }
+        .btn-gold { background: var(--accent-gold); color: #000; }
+        .btn-purple { background: var(--accent-purple); color: #000; }
+        .btn-outline { background: transparent; border: 2px solid var(--glass-border); color: #fff; }
+
+        .action-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* 首頁專用按鈕 */
+        .home-btn {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 24px;
+            text-align: left;
+            border: none;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .home-btn-primary {
+            background: linear-gradient(135deg, var(--accent-purple), #9333ea);
+            color: black;
+            box-shadow: 0 15px 30px rgba(192, 132, 252, 0.3);
+        }
+        .home-btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        /* 🏆 即時戰況 Scoreboard */
+        .live-scoreboard {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+            flex-shrink: 0;
+            min-height: 55px;
+            align-items: center;
+        }
+        .score-pill {
+            flex-shrink: 0;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50px;
+            font-size: 14px;
+            border: 1px solid var(--glass-border);
+        }
+        .score-pill.active-turn {
+            background: var(--accent-purple);
+            color: #000;
+            border-color: var(--accent-purple);
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(192, 132, 252, 0.4);
+        }
+
+        /* 🎮 遊戲核心展示 */
+        .game-display {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 250px;
+        }
+        .timer-text { font-size: 80px; font-weight: 800; color: var(--danger-red); margin-bottom: 10px; font-family: 'Courier New', Courier, monospace; }
+        .word-text { font-size: 64px; font-weight: 900; text-align: center; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+
+        .game-footer-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; flex-shrink: 0; padding-bottom: 10px; }
+        /* 遊戲中答題按鈕縮小 */
+        .btn-game-action { height: 64px; border-radius: 20px; font-size: 18px; font-weight: 800; border: none; cursor: pointer; }
+
+        input, select {
+            width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--glass-border);
+            background: rgba(0,0,0,0.4); color: white; font-size: 16px; margin: 8px 0;
+            box-sizing: border-box;
+        }
+
+        /* 🎮 遊戲設定專用縮窄版面 */
+        #screen-game-settings {
+            justify-content: flex-start;
+            padding-top: 15px;
+        }
+        #screen-game-settings .scrollable-content {
+            overflow: hidden;
+        }
+        .settings-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 15px;
+        }
+        #screen-game-settings .glass-panel {
+            padding: 18px;
+        }
+        #screen-game-settings .live-scoreboard {
+            min-height: 45px;
+            margin-bottom: 10px;
+        }
+        #screen-game-settings h2 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        #countdown-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999;
+            display: none; justify-content: center; align-items: center;
+            font-size: 180px; font-weight: 900; color: var(--accent-gold);
         }
         
-        /* 置頂結算按鈕樣式 */
-        .confirm-btn-top {
-            font-size: 20px;
-            padding: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 8px 20px rgba(212,163,115,0.25);
+        #custom-confirm-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(10px);
+            padding: 20px;
+        }
+
+        .floating-score {
+            position: absolute;
+            font-size: 60px;
+            font-weight: 900;
+            opacity: 1;
+            z-index: 1000;
+            pointer-events: none;
+            animation: floatUp 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+            text-shadow: 0 0 20px rgba(255,255,255,0.4);
+        }
+        @keyframes floatUp {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -150px) scale(1.5); opacity: 0; }
         }
     </style>
 </head>
 <body>
 
+    <div class="bg-layer"></div>
     <div id="countdown-overlay">3</div>
 
-    <div id="screen-home" class="screen active">
-        <div class="flex-spacer"></div>
-        <h1 style="font-size: 36px; margin-bottom: 40px;">🦓PY派對🦒</h1>
-        <button onclick="startGroupSetup()">建立組別</button>
-        <button class="btn-warning" onclick="startQuickGame()">直接開始</button>
-        <div class="flex-spacer"></div>
-    </div>
-
-    <div id="screen-setup-participants" class="screen">
-        <h2>參與人員設定</h2>
-        <label>參與總人數：</label>
-        <input type="number" id="participant-count" min="2" max="20" value="4" onchange="generateNameInputs()" inputmode="numeric">
-        <div id="name-inputs-container" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
-        <div class="flex-spacer"></div>
-        <button onclick="goToAssignMethod()">下一步</button>
-        <button class="btn-outline" onclick="showScreen('screen-home')">返回</button>
-    </div>
-
-    <div id="screen-setup-method" class="screen">
-        <h2>選擇分組方式</h2>
-        <div class="flex-spacer"></div>
-        <button onclick="showCustomSetup()">自定義組員</button>
-        <button class="btn-warning" onclick="showRandomSetup()">隨機抽籤分組</button>
-        <div class="flex-spacer"></div>
-        <button class="btn-outline" onclick="showScreen('screen-setup-participants')">上一步</button>
-    </div>
-
-    <div id="screen-setup-custom" class="screen">
-        <h2>自定義組別</h2>
-        <label>分成幾組？</label>
-        <input type="number" id="custom-group-count" min="2" max="10" value="2" onchange="renderCustomAssignment()" inputmode="numeric">
-        <div id="custom-assignment-container" style="max-height: 50vh; overflow-y: auto;"></div>
-        <div class="flex-spacer"></div>
-        <button onclick="finishCustomSetup()">完成分組</button>
-        <button class="btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
-    </div>
-
-    <div id="screen-setup-random" class="screen">
-        <h2>抽籤分組</h2>
-        <label>分成幾組？</label>
-        <input type="number" id="random-group-count" min="2" max="10" value="2" onchange="renderRandomSizeInputs()" inputmode="numeric">
-        <div id="random-size-container" style="max-height: 50vh; overflow-y: auto;"></div>
-        <div class="flex-spacer"></div>
-        <button onclick="finishRandomSetup()" class="btn-warning">開始抽籤</button>
-        <button class="btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
-    </div>
-
-    <div id="screen-game-settings" class="screen">
-        <h2>遊戲設定</h2>
-        
-        <div id="settings-scoreboard" class="scoreboard" style="display: none;"></div>
-
-        <label>選擇主題：</label>
-        <select id="theme-select" onchange="toggleTimeInput()">
-            <option value="人名">人名</option>
-            <option value="地名">地名</option>
-            <option value="動植物">動植物</option>
-            <option value="成語">成語</option>
-            <option value="娛樂">娛樂 </option>
-            <option value="飲食">飲食</option>
-            <option value="職業">職業</option>
-            <option value="品牌">品牌</option>
-            <option value="抽象">抽象詞彙</option>
-            <option value="純計分" id="theme-pure-score">純計分</option>
-        </select>
-
-        <div id="time-setting-group">
-            <label>設定秒數：</label>
-            <input type="number" id="time-input" value="60" min="10" max="600" inputmode="numeric">
-        </div>
-
-        <h3 id="current-turn-display" style="color: var(--primary-dark); margin-top: 15px; padding: 10px; background: rgba(255,255,255,0.65); border-radius: 12px; backdrop-filter: blur(14px);"></h3>
-
-        <div class="flex-spacer"></div>
-        <button class="btn-success" onclick="startGameplay()">開始遊戲</button>
-        <button class="btn-outline" onclick="backToHome()">回到首頁</button>
-    </div>
-
-    <div id="screen-gameplay" class="screen">
-        <div id="gameplay-scoreboard" class="scoreboard" style="display: none;"></div>
-
-        <div class="game-area">
-            <div class="timer-display" id="game-timer">01:00</div>
-            <div class="word-display" id="game-word">準備中...</div>
-            <button id="btn-end-pure" class="btn-warning" style="display:none; height: 60px; font-size: 20px; width: 80%;" onclick="endGameplay()">結束統計</button>
-        </div>
-
-        <div class="action-buttons" id="game-action-buttons">
-            <button class="btn-danger" onclick="recordAnswer(false)" id="btn-wrong">答錯 / Pass</button>
-            <button class="btn-success" onclick="recordAnswer(true)" id="btn-correct">答對</button>
-        </div>
-    </div>
-
-    <div id="screen-summary" class="screen">
-        <h2 id="summary-title">回合結算</h2>
-        <h3 id="summary-group-name" style="color: var(--primary-dark); margin-bottom: 20px;"></h3>
-        
-        <button class="btn-warning confirm-btn-top" onclick="confirmSummary()">確認結算</button>
-        
-        <div class="result-container" id="summary-word-list">
-            <div class="summary-stats">
-                <span class="text-correct">答對：<span id="summary-correct-count">0</span></span>
-                <span class="text-danger">答錯：<span id="summary-wrong-count">0</span></span>
-            </div>
-            <p style="text-align: center; font-size: 14px; color: #888; margin-bottom: 15px;">💡 點擊下方標籤可手動修改答對/答錯狀態</p>
-            
-            <h4 class="text-correct" style="text-align: left;">答對區 (點擊移至答錯)：</h4>
-            <div class="word-pool" id="list-correct"></div>
-            
-            <h4 class="text-danger" style="text-align: left; margin-top: 20px;">答錯區 (點擊移至答對)：</h4>
-            <div class="word-pool" id="list-wrong"></div>
-        </div>
-
-        <div class="result-container" id="summary-pure-score-info" style="display:none;">
-            <p style="text-align: center; font-size: 16px; color: #888;">微調本回合獲得分數</p>
-            <div class="score-adjuster">
-                <button class="btn-danger" onclick="adjustPureScore(-1)">-</button>
-                <span id="summary-pure-score-val" style="min-width: 60px; text-align: center;">0</span>
-                <button class="btn-success" onclick="adjustPureScore(1)">+</button>
+    <div id="custom-confirm-overlay">
+        <div class="glass-panel" style="width: calc(100% - 40px); max-width: 320px; text-align: center; padding: 35px 25px; margin: 0;">
+            <h3 style="margin-top:0; font-size: 24px; color:var(--accent-gold);">確認返回？</h3>
+            <p style="margin-bottom:30px; font-size:16px; line-height: 1.5;">確定要結束遊戲並回到首頁嗎？<br><span style="color:var(--danger-red); font-size:14px;">所有進度將不被保留。</span></p>
+            <div style="display:flex; gap:15px;">
+                <button class="action-btn btn-outline" style="flex:1;" onclick="closeConfirmModal()">取消</button>
+                <button class="action-btn" style="flex:1; background:var(--danger-red); color:white; border:none;" onclick="executeBackToHome()">確定結束</button>
             </div>
         </div>
+    </div>
+
+    <div class="main-shell">
+        
+        <div id="screen-home" class="screen active">
+            
+            <div class="spotlight spotlight-1"></div>
+            <div class="spotlight spotlight-2"></div>
+            <div class="spotlight spotlight-3"></div>
+
+            <div class="home-top" style="padding:40px 30px 20px 30px;">
+                <p style="letter-spacing:6px; opacity:0.4; font-size:12px;">WELCOME TO</p>
+
+                <h1 class="home-logo" style="margin-bottom:15px;">派對動物</h1>
+
+                <p style="opacity:0.6; font-size:14px; max-width:260px; line-height:1.6;">
+                    鴨鴨鴨 鴨鴨<br>
+                    嗚喔喔喔喔 喔喔喔 窩喔
+                </p>
+
+                <div style="
+                    margin-top:25px;
+                    width:60px;
+                    height:4px;
+                    border-radius:3px;
+                    background:linear-gradient(90deg,var(--accent-gold),var(--accent-purple));
+                    box-shadow:0 0 20px var(--accent-purple);
+                "></div>
+            </div>
+
+            <div style="
+                padding:20px;
+                display:flex;
+                flex-direction:column;
+                gap:18px;
+                margin-top:auto;
+                margin-bottom:40px;
+            ">
+
+                <button onclick="startGroupSetup()" class="home-btn home-btn-secondary">
+                    <span style="font-weight:800; font-size:20px;">建立組別</span>
+                    <div style="font-size:13px; font-weight:500; opacity:0.7; margin-top:4px;">
+                        適合多人競賽模式
+                    </div>
+                </button>
+
+                <button onclick="startQuickGame()" class="home-btn home-btn-secondary">
+                    <span style="font-weight:800; font-size:20px;">直接開始</span>
+                    <div style="font-size:13px; font-weight:500; opacity:0.6; margin-top:4px;">
+                        立即開玩，不需分組
+                    </div>
+                </button>
+
+            </div>
+
+        </div>
+
+        <div id="screen-setup-participants" class="screen">
+            <h2>誰在現場？</h2>
+            <div class="scrollable-content">
+                <div class="glass-panel" style="display:flex; flex-direction:column; flex:1;">
+                    <label>玩家人數</label>
+                    <input type="number" id="participant-count" value="4" onchange="generateNameInputs()" inputmode="numeric">
+                    <div id="name-inputs-area" style="margin-top: 15px; flex:1;"></div>
+                </div>
+            </div>
+            <div class="fixed-bottom-btns">
+                <button class="action-btn btn-outline" onclick="showScreen('screen-home')">返回</button>
+                <button class="action-btn btn-purple" onclick="goToAssignMethod()">下一步</button>
+            </div>
+        </div>
+
+        <div id="screen-setup-method" class="screen">
+            <h2>組別分配模式</h2>
+            <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:15px;">
+                <button class="action-btn btn-gold" style="flex:none; height: 60px; font-size: 18px;" onclick="showCustomSetup()">手動分配組員</button>
+                <button class="action-btn btn-purple" style="flex:none; height: 60px; font-size: 18px;" onclick="showRandomSetup()">隨機抽籤分組</button>
+            </div>
+            <div class="fixed-bottom-btns" style="margin-top: 15px;">
+                <button class="action-btn btn-outline" onclick="showScreen('screen-setup-participants')">上一步</button>
+                <div style="flex:1;"></div> </div>
+        </div>
+
+        <div id="screen-setup-custom" class="screen">
+            <h2>自定義分組</h2>
+            <div class="scrollable-content">
+                <div class="glass-panel" style="display:flex; flex-direction:column; flex:1;">
+                    <label>分成幾組？</label>
+                    <input type="number" id="custom-group-count" value="2" onchange="renderCustomAssignment()" inputmode="numeric">
+                    <div id="custom-assign-area" style="margin-top: 15px; flex: 1;"></div>
+                </div>
+            </div>
+            <div class="fixed-bottom-btns">
+                <button class="action-btn btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
+                <button class="action-btn btn-purple" onclick="finishCustomSetup()">完成分組</button>
+            </div>
+        </div>
+
+        <div id="screen-setup-random" class="screen">
+            <h2>隨機分組</h2>
+            <div class="scrollable-content">
+                <div class="glass-panel" style="display:flex; flex-direction:column; flex:1;">
+                    <label>分成幾組？</label>
+                    <input type="number" id="random-group-count" value="2" onchange="renderRandomSizeInputs()" inputmode="numeric">
+                    <div id="random-size-area" style="margin-top: 15px; flex: 1;"></div>
+                </div>
+            </div>
+            <div class="fixed-bottom-btns">
+                <button class="action-btn btn-outline" onclick="showScreen('screen-setup-method')">上一步</button>
+                <button class="action-btn btn-gold" onclick="finishRandomSetup()">開始抽籤</button>
+            </div>
+        </div>
+
+        <div id="screen-setup-random-result" class="screen">
+            <h2>抽籤結果</h2>
+            <div class="scrollable-content" id="random-result-area" style="padding-bottom: 10px;"></div>
+            <div class="fixed-bottom-btns">
+                <button class="action-btn btn-outline" onclick="showScreen('screen-setup-random')">重新抽籤</button>
+                <button class="action-btn btn-purple" onclick="initGameSettings()">確認並繼續</button>
+            </div>
+        </div>
+
+        <div id="screen-game-settings" class="screen">
+            <div id="settings-scoreboard" class="live-scoreboard"></div>
+
+            <div id="turn-card" class="glass-panel" style="text-align:center; margin-bottom:15px;">
+                <div id="current-turn-display"></div>
+            </div>
+
+            <h2>遊戲設定</h2>
+
+            <div class="settings-content">
+                <div class="glass-panel">
+                    <label>選擇遊戲主題</label>
+                    <select id="theme-select" onchange="toggleTimeInput()">
+                        <option value="人名">人名</option>
+                        <option value="地名">地名</option>
+                        <option value="動植物">動植物</option>
+                        <option value="成語">成語</option>
+                        <option value="娛樂">娛樂</option>
+                        <option value="飲食">飲食</option>
+                        <option value="職業">職業</option>
+                        <option value="品牌">品牌</option>
+                        <option value="抽象">抽象</option>
+                        <option value="純計分" id="theme-pure-score">純計分</option>
+                    </select>
+
+                    <div id="time-setting-group">
+                        <label>每回合時間 (秒)</label>
+                        <input type="number" id="time-input" value="60" min="10" inputmode="numeric">
+                    </div>
+                </div>
+            </div>
+
+            <div class="fixed-bottom-btns">
+                <button class="action-btn btn-outline" onclick="backToHome()">回到首頁</button>
+                <button class="action-btn btn-purple"
+                    style="background:var(--success-green);"
+                    onclick="startGameplay()">開始遊戲</button>
+            </div>
+        </div>
+
+        <div id="screen-gameplay" class="screen">
+            <div id="gameplay-scoreboard" class="live-scoreboard"></div>
+            <div class="game-display">
+                <div class="timer-text" id="game-timer">01:00</div>
+                <div class="word-text" id="game-word">準備</div>
+                <button id="btn-end-pure" class="action-btn btn-gold" style="display:none; width: 150px; flex:none;" onclick="endGameplay()">結束統計</button>
+            </div>
+            <div class="game-footer-btns" id="game-action-buttons">
+                <button class="btn-game-action" style="background:var(--danger-red); color:white;" onclick="recordAnswer(false)">答錯 / Pass</button>
+                <button class="btn-game-action" style="background:var(--success-green); color:black;" onclick="recordAnswer(true)">答對</button>
+            </div>
+        </div>
+
+        <div id="screen-summary" class="screen">
+            <button class="action-btn btn-gold" style="flex-shrink:0; margin-bottom: 20px; flex:none;" onclick="confirmSummary()">確認結算</button>
+            <h2 id="summary-group-name" style="flex-shrink:0;"></h2>
+            
+            <div class="glass-panel scrollable-content" style="margin-bottom:0;">
+                <div id="summary-word-list-area">
+                    <div style="display:flex; justify-content:space-around; font-weight:bold; margin-bottom:20px; font-size: 20px;">
+                        <span style="color:var(--success-green)">答對: <span id="summary-correct-count">0</span></span>
+                        <span style="color:var(--danger-red)">答錯: <span id="summary-wrong-count">0</span></span>
+                    </div>
+                    <div id="list-correct" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:20px;"></div>
+                    <div id="list-wrong" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+                </div>
+                
+                <div id="summary-pure-score-info" style="display:none; height:100%; flex-direction:column; justify-content:center; align-items:center;">
+                    <p style="color:var(--accent-gold); font-size:18px; margin-top:0;">手動微調本回合得分</p>
+                    <div style="display:flex; justify-content:center; align-items:center; gap:35px; margin-top:15px;">
+                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background: var(--danger-red); color:white; font-size:36px; display:flex; align-items:center; justify-content:center; border:none;" onclick="adjustPureScore(-1)">-</button>
+                        <span id="summary-pure-score-val" style="font-size:72px; font-weight:900; min-width:80px; text-align:center; text-shadow:0 0 15px rgba(255,255,255,0.3);">0</span>
+                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background: var(--success-green); color:black; font-size:36px; display:flex; align-items:center; justify-content:center; border:none;" onclick="adjustPureScore(1)">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // --- 讀取外部題庫檔案 ---
-        let wordBank = {};
-
+        var wordBank = {};
+        
         async function loadWordBank() {
             try {
-                const response = await fetch('questions.json');
-                if (!response.ok) throw new Error('無法讀取 questions.json');
-                wordBank = await response.json();
+                var response = await fetch('questions.json');
+                var data = await response.json();
+                wordBank = data;
             } catch (err) {
-                console.error('題庫載入失敗:', err);
-                alert('載入題庫失敗，請確認同目錄下是否有 questions.json 檔案。');
+                console.log('載入題庫時發生錯誤');
             }
         }
-        
-        // 初始載入
         loadWordBank();
 
-        // --- 全域狀態 ---
-        let state = {
-            mode: 'quick', 
+        var state = {
+            mode: 'quick',
             participants: [],
-            groups: [], 
+            groups: [],
             currentGroupIndex: 0,
             currentTheme: '',
             timeLimit: 60,
             timer: null,
             timeLeft: 0,
             currentWords: [],
-            roundData: { correct: [], wrong: [], scoreDelta: 0 }
+            roundData: {
+                correct: [],
+                wrong: [],
+                scoreDelta: 0
+            }
         };
 
-        // --- 畫面切換與功能 ---
         function showScreen(screenId) {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            var screens = document.querySelectorAll('.screen');
+            for (var i = 0; i < screens.length; i++) {
+                screens[i].classList.remove('active');
+            }
             document.getElementById(screenId).classList.add('active');
-            window.scrollTo(0,0);
+            
+            if (screenId === 'screen-game-settings' || screenId === 'screen-gameplay') {
+                updateScoreboards();
+                updateCurrentTurnText();
+            }
         }
 
         function toggleTimeInput() {
-            const isPure = document.getElementById('theme-select').value === '純計分';
-            document.getElementById('time-setting-group').style.display = isPure ? 'none' : 'block';
+            var theme = document.getElementById('theme-select').value;
+            if (theme === '純計分') {
+                document.getElementById('time-setting-group').style.display = 'none';
+            } else {
+                document.getElementById('time-setting-group').style.display = 'block';
+            }
         }
 
-        // --- 首頁邏輯 ---
         function startQuickGame() {
             state.mode = 'quick';
             state.groups = [];
-            document.getElementById('theme-pure-score').disabled = true;
+            state.currentGroupIndex = 0;
+            document.getElementById('settings-scoreboard').innerHTML = '';
+            document.getElementById('gameplay-scoreboard').innerHTML = '';
             document.getElementById('settings-scoreboard').style.display = 'none';
-            document.getElementById('current-turn-display').style.display = 'none';
-            document.getElementById('theme-select').value = '人名';
-            toggleTimeInput();
+            document.getElementById('turn-card').style.display = 'none';
+            document.getElementById('theme-pure-score').disabled = true;
             showScreen('screen-game-settings');
         }
 
         function startGroupSetup() {
             state.mode = 'group';
             document.getElementById('theme-pure-score').disabled = false;
+            document.getElementById('settings-scoreboard').style.display = 'flex';
+            document.getElementById('turn-card').style.display = 'block';
             generateNameInputs();
             showScreen('screen-setup-participants');
         }
 
-        // --- 參與者設定邏輯 ---
         function generateNameInputs() {
-            const count = parseInt(document.getElementById('participant-count').value) || 4;
-            const container = document.getElementById('name-inputs-container');
+            var count = parseInt(document.getElementById('participant-count').value);
+            if (isNaN(count)) count = 4;
+            var container = document.getElementById('name-inputs-area');
             container.innerHTML = '';
-            for (let i = 1; i <= count; i++) {
-                container.innerHTML += `<input type="text" id="participant-${i}" placeholder="成員 ${i} 的名稱" value="玩家 ${i}">`;
+            for (var i = 1; i <= count; i++) {
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'participant-' + i;
+                input.value = '玩家 ' + i;
+                container.appendChild(input);
             }
         }
 
         function goToAssignMethod() {
-            const count = parseInt(document.getElementById('participant-count').value);
+            var count = parseInt(document.getElementById('participant-count').value);
             state.participants = [];
-            for (let i = 1; i <= count; i++) {
-                const name = document.getElementById(`participant-${i}`).value.trim() || `玩家 ${i}`;
+            for (var i = 1; i <= count; i++) {
+                var name = document.getElementById('participant-' + i).value.trim();
+                if (name === '') name = '玩家 ' + i;
                 state.participants.push(name);
             }
             showScreen('screen-setup-method');
@@ -474,39 +661,40 @@
         }
 
         function renderCustomAssignment() {
-            const groupCount = parseInt(document.getElementById('custom-group-count').value) || 2;
-            const container = document.getElementById('custom-assignment-container');
+            var gc = parseInt(document.getElementById('custom-group-count').value);
+            if (isNaN(gc)) gc = 2;
+            var container = document.getElementById('custom-assign-area');
             container.innerHTML = '';
             
-            let groupOptions = '';
-            for(let g = 1; g <= groupCount; g++) {
-                groupOptions += `<option value="${g}">第 ${g} 組</option>`;
+            var optionsHtml = '';
+            for (var g = 1; g <= gc; g++) {
+                optionsHtml += '<option value="' + g + '">第 ' + g + ' 組</option>';
             }
 
-            state.participants.forEach((p, index) => {
-                container.innerHTML += `
-                    <div style="display:flex; align-items:center; margin-bottom:10px; gap:10px;">
-                        <div style="flex:1; font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${p}</div>
-                        <select id="assign-${index}" style="flex:2; margin:0;">
-                            ${groupOptions}
-                        </select>
-                    </div>
-                `;
-            });
+            for (var i = 0; i < state.participants.length; i++) {
+                var div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.style.marginBottom = '10px';
+                div.innerHTML = '<span style="flex:1">' + state.participants[i] + '</span>' +
+                                '<select id="assign-select-' + i + '" style="flex:1; margin:0;">' + optionsHtml + '</select>';
+                container.appendChild(div);
+            }
         }
 
         function finishCustomSetup() {
-            const groupCount = parseInt(document.getElementById('custom-group-count').value) || 2;
-            state.groups = Array.from({length: groupCount}, (_, i) => ({ name: `第 ${i+1} 組`, members: [], score: 0 }));
-            
-            state.participants.forEach((p, index) => {
-                const gIndex = parseInt(document.getElementById(`assign-${index}`).value) - 1;
-                state.groups[gIndex].members.push(p);
-            });
-
-            if(state.groups.some(g => g.members.length === 0)) {
-                alert('每組至少需要一名成員！');
-                return;
+            var gc = parseInt(document.getElementById('custom-group-count').value);
+            state.groups = [];
+            for (var g = 0; g < gc; g++) {
+                state.groups.push({
+                    name: '第 ' + (g + 1) + ' 組',
+                    members: [],
+                    score: 0
+                });
+            }
+            for (var i = 0; i < state.participants.length; i++) {
+                var groupIdx = parseInt(document.getElementById('assign-select-' + i).value) - 1;
+                state.groups[groupIdx].members.push(state.participants[i]);
             }
             initGameSettings();
         }
@@ -517,296 +705,284 @@
         }
 
         function renderRandomSizeInputs() {
-            const groupCount = parseInt(document.getElementById('random-group-count').value) || 2;
-            const container = document.getElementById('random-size-container');
-            container.innerHTML = `<p style="color:var(--danger); font-size:16px; font-weight:bold;">總人數：${state.participants.length} 人</p>`;
-            
-            const baseSize = Math.floor(state.participants.length / groupCount);
-            let remainder = state.participants.length % groupCount;
+            var gc = parseInt(document.getElementById('random-group-count').value);
+            var container = document.getElementById('random-size-area');
+            container.innerHTML = '';
+            var baseSize = Math.floor(state.participants.length / gc);
+            var remainder = state.participants.length % gc;
 
-            for(let g = 1; g <= groupCount; g++) {
-                let defaultSize = baseSize + (remainder > 0 ? 1 : 0);
-                if(remainder > 0) remainder--;
-                
-                container.innerHTML += `
-                    <div style="display:flex; align-items:center; margin-bottom:10px; gap:10px;">
-                        <label style="flex:1; white-space: nowrap;">第 ${g} 組人數：</label>
-                        <input type="number" id="random-size-${g}" min="1" max="${state.participants.length}" value="${defaultSize}" style="flex:1; margin:0;" inputmode="numeric">
-                    </div>
-                `;
+            for (var g = 1; g <= gc; g++) {
+                var size = baseSize + (remainder > 0 ? 1 : 0);
+                if (remainder > 0) remainder--;
+                var div = document.createElement('div');
+                div.style.display = 'flex';
+                div.style.alignItems = 'center';
+                div.innerHTML = '<label>第 ' + g + ' 組人數：</label><input type="number" id="random-size-' + g + '" value="' + size + '" style="flex:1">';
+                container.appendChild(div);
             }
         }
 
         function finishRandomSetup() {
-            const groupCount = parseInt(document.getElementById('random-group-count').value);
-            let sizes = [];
-            let totalSize = 0;
-            
-            for(let g = 1; g <= groupCount; g++) {
-                const s = parseInt(document.getElementById(`random-size-${g}`).value);
-                sizes.push(s);
-                totalSize += s;
+            var gc = parseInt(document.getElementById('random-group-count').value);
+            var total = 0;
+            for (var g = 1; g <= gc; g++) {
+                var sizeInput = document.getElementById('random-size-' + g).value;
+                var size = parseInt(sizeInput);
+                if (isNaN(size) || size <= 0) {
+                    alert("每組人數必須大於 0");
+                    return;
+                }
+                total += size;
             }
 
-            if(totalSize !== state.participants.length) {
-                alert(`分組人數總和 (${totalSize}) 必須等於總參與人數 (${state.participants.length})！`);
+            if (total !== state.participants.length) {
+                alert("組別總人數 (" + total + ") 必須等於玩家總人數 (" + state.participants.length + ")！");
                 return;
             }
 
-            let shuffled = [...state.participants].sort(() => 0.5 - Math.random());
+            var tempParticipants = [];
+            for (var i = 0; i < state.participants.length; i++) {
+                tempParticipants.push(state.participants[i]);
+            }
+            tempParticipants.sort(function() { return 0.5 - Math.random(); });
+            
             state.groups = [];
-            let currentIndex = 0;
-
-            sizes.forEach((size, i) => {
+            var currentIndex = 0;
+            for (var g = 1; g <= gc; g++) {
+                var size = parseInt(document.getElementById('random-size-' + g).value);
+                var groupMembers = tempParticipants.slice(currentIndex, currentIndex + size);
                 state.groups.push({
-                    name: `第 ${i+1} 組`,
-                    members: shuffled.slice(currentIndex, currentIndex + size),
+                    name: '第 ' + g + ' 組',
+                    members: groupMembers,
                     score: 0
                 });
                 currentIndex += size;
-            });
-
-            let groupAlertInfo = state.groups.map(g => `${g.name}: ${g.members.join(', ')}`).join('\n');
-            alert("🎯 抽籤完成！\n\n" + groupAlertInfo);
-            initGameSettings();
+            }
+            
+            var resultContainer = document.getElementById('random-result-area');
+            resultContainer.innerHTML = '';
+            for (var j = 0; j < state.groups.length; j++) {
+                var group = state.groups[j];
+                var div = document.createElement('div');
+                div.className = 'glass-panel';
+                div.style.marginBottom = '15px';
+                div.innerHTML = '<h3 style="margin-top:0; color:var(--accent-purple); font-size: 20px;">' + group.name + '</h3>' +
+                                '<p style="margin:0; font-size:16px; line-height: 1.6;">' + group.members.join('、 ') + '</p>';
+                resultContainer.appendChild(div);
+            }
+            showScreen('screen-setup-random-result');
         }
 
-        // --- 遊戲設定 ---
         function initGameSettings() {
             state.currentGroupIndex = 0;
-            document.getElementById('theme-select').value = '人名';
-            toggleTimeInput();
             updateScoreboards();
-            document.getElementById('settings-scoreboard').style.display = 'flex';
-            document.getElementById('current-turn-display').style.display = 'block';
             updateCurrentTurnText();
             showScreen('screen-game-settings');
         }
 
         function updateScoreboards() {
-            if(state.mode !== 'group') return;
-            let html = state.groups.map((g, i) => `
-                <div class="score-item ${i === state.currentGroupIndex ? 'active-group' : ''}">
-                    ${g.name}: ${g.score} 分
-                </div>
-            `).join('');
+            if (state.mode !== 'group') return;
+            var html = '';
+            for (var i = 0; i < state.groups.length; i++) {
+                var activeClass = (i === state.currentGroupIndex) ? ' active-turn' : '';
+                html += '<div class="score-pill' + activeClass + '">' + state.groups[i].name + ': ' + state.groups[i].score + '</div>';
+            }
             document.getElementById('settings-scoreboard').innerHTML = html;
             document.getElementById('gameplay-scoreboard').innerHTML = html;
         }
 
         function updateCurrentTurnText() {
-            if(state.mode === 'group') {
-                const group = state.groups[state.currentGroupIndex];
-                document.getElementById('current-turn-display').innerText = `👉 現在輪到：${group.name}\n(${group.members.join(', ')})`;
-            }
-        }
-
-        function backToHome() {
             if (state.mode === 'group') {
-                if (!confirm("⚠️ 確定要回到首頁嗎？\n所有的分組資料與分數都將被清除！")) return;
+                var g = state.groups[state.currentGroupIndex];
+                if (g) {
+                    var memberList = g.members.join(', ');
+                    document.getElementById('current-turn-display').innerHTML = 
+                        '<div style="font-size:12px; opacity:0.5; margin-bottom:5px;">NEXT PLAYER</div>' +
+                        '<div style="font-size:24px; font-weight:800; color:var(--accent-purple);">' + g.name + '</div>' +
+                        '<div style="font-size:14px; margin-top:5px;">組員: ' + memberList + '</div>';
+                }
             }
-            clearInterval(state.timer);
-            showScreen('screen-home');
         }
 
-        // --- 遊戲進行 ---
         function startGameplay() {
             state.currentTheme = document.getElementById('theme-select').value;
-            state.timeLimit = parseInt(document.getElementById('time-input').value) || 60;
+            var timeVal = parseInt(document.getElementById('time-input').value);
+            state.timeLimit = isNaN(timeVal) ? 60 : timeVal;
             state.roundData = { correct: [], wrong: [], scoreDelta: 0 };
-            
-            const isPureScore = state.currentTheme === '純計分';
 
-            if (!isPureScore) {
-                const rawWords = wordBank[state.currentTheme] || [];
-                state.currentWords = [...rawWords].sort(() => 0.5 - Math.random());
-                document.getElementById('btn-correct').innerText = "答對";
-                document.getElementById('btn-wrong').innerText = "答錯 / Pass";
-                document.getElementById('game-action-buttons').style.display = 'flex';
+            var isPure = (state.currentTheme === '純計分');
+            if (isPure) {
+                document.getElementById('game-action-buttons').style.display = 'grid';
+                document.getElementById('btn-end-pure').style.display = 'block';
+                document.getElementById('game-timer').style.display = 'none';
+                document.getElementById('game-word').style.color = 'var(--text-main)';
+            } else {
+                state.currentWords = [];
+                var bank = wordBank[state.currentTheme] || [];
+                for (var i = 0; i < bank.length; i++) { state.currentWords.push(bank[i]); }
+                state.currentWords.sort(function() { return 0.5 - Math.random(); });
+                
+                document.getElementById('game-action-buttons').style.display = 'grid';
                 document.getElementById('btn-end-pure').style.display = 'none';
                 document.getElementById('game-timer').style.display = 'block';
-            } else {
-                document.getElementById('btn-correct').innerText = "+1 分";
-                document.getElementById('btn-wrong').innerText = "-1 分";
-                document.getElementById('game-action-buttons').style.display = 'flex';
-                document.getElementById('btn-end-pure').style.display = 'block';
-                document.getElementById('game-timer').style.display = 'none'; // 純計分不顯示秒數
-            }
-
-            if(state.mode === 'group') {
-                document.getElementById('gameplay-scoreboard').style.display = 'flex';
-                updateScoreboards();
-            } else {
-                document.getElementById('gameplay-scoreboard').style.display = 'none';
+                document.getElementById('game-word').style.color = 'var(--text-main)';
             }
 
             showScreen('screen-gameplay');
-            startCountdown(isPureScore);
+            startCountdown(isPure);
         }
 
-        function startCountdown(isPureScore) {
-            const overlay = document.getElementById('countdown-overlay');
+        function startCountdown(isPure) {
+            var overlay = document.getElementById('countdown-overlay');
             overlay.style.display = 'flex';
-            let count = 3;
+            var count = 3;
             overlay.innerText = count;
-
-            const countInterval = setInterval(() => {
+            var itv = setInterval(function() {
                 count--;
-                if (count > 0) {
-                    overlay.innerText = count;
-                } else if (count === 0) {
-                    overlay.innerText = "GO!";
-                } else {
-                    clearInterval(countInterval);
+                if (count > 0) { overlay.innerText = count; }
+                else if (count === 0) { overlay.innerText = "GO!"; }
+                else {
+                    clearInterval(itv);
                     overlay.style.display = 'none';
-                    if (!isPureScore) {
-                        startTimer();
-                    }
+                    if (!isPure) startTimer();
                     nextWord();
                 }
             }, 1000);
         }
 
-        function formatTime(seconds) {
-            const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
-        }
-
-        // 🔥 新增：時間到後將停在畫面的題目自動歸類到「答錯區」
         function startTimer() {
             state.timeLeft = state.timeLimit;
-            document.getElementById('game-timer').innerText = formatTime(state.timeLeft);
-            
-            state.timer = setInterval(() => {
+            var updateDisp = function() {
+                var m = Math.floor(state.timeLeft / 60).toString().padStart(2, '0');
+                var s = (state.timeLeft % 60).toString().padStart(2, '0');
+                document.getElementById('game-timer').innerText = m + ':' + s;
+            };
+            updateDisp();
+            if (state.timer) clearInterval(state.timer);
+            state.timer = setInterval(function() {
                 state.timeLeft--;
-                document.getElementById('game-timer').innerText = formatTime(state.timeLeft);
-                
+                updateDisp();
                 if (state.timeLeft <= 0) {
                     clearInterval(state.timer);
-                    
-                    // 如果還有題目停在畫面上，且沒被記錄
-                    if (state.currentTheme !== '純計分' && state.currentWords.length > 0) {
-                        const lastWord = state.currentWords.shift();
-                        state.roundData.wrong.push(lastWord);
+                    state.timer = null;
+                    if (state.currentWords && state.currentWords.length > 0) {
+                        state.roundData.wrong.push(state.currentWords.shift());
                     }
-
                     endGameplay();
                 }
             }, 1000);
         }
 
         function nextWord() {
+            var el = document.getElementById('game-word');
             if (state.currentTheme === '純計分') {
-                document.getElementById('game-word').innerText = "計分模式";
+                el.innerText = state.roundData.scoreDelta > 0 ? "+" + state.roundData.scoreDelta : state.roundData.scoreDelta;
                 return;
             }
-
             if (state.currentWords.length === 0) {
-                document.getElementById('game-word').innerText = "⚠️ 題目已用盡";
+                el.innerText = "題目用盡";
                 return;
             }
-            document.getElementById('game-word').innerText = state.currentWords[0];
+            el.innerText = state.currentWords[0];
         }
 
         function recordAnswer(isCorrect) {
-            if (state.currentTheme !== '純計分' && state.timeLeft <= 0) return;
-
             if (state.currentTheme === '純計分') {
-                state.roundData.scoreDelta += isCorrect ? 1 : -1;
-                const wordEl = document.getElementById('game-word');
-                wordEl.innerText = isCorrect ? "+1" : "-1";
-                wordEl.style.color = isCorrect ? "var(--success)" : "var(--danger)";
-                setTimeout(() => { wordEl.style.color = "var(--dark)"; wordEl.innerText = "計分模式"; }, 300);
+                if (isCorrect) state.roundData.scoreDelta += 1;
+                else state.roundData.scoreDelta -= 1;
+                var floatEl = document.createElement('div');
+                floatEl.className = 'floating-score';
+                floatEl.innerText = isCorrect ? '+1' : '-1';
+                floatEl.style.color = isCorrect ? 'var(--success-green)' : 'var(--danger-red)';
+                var randomOffsetX = (Math.random() - 0.5) * 80;
+                floatEl.style.left = 'calc(50% + ' + randomOffsetX + 'px)';
+                floatEl.style.top = '45%';
+                document.body.appendChild(floatEl);
+                var wordEl = document.getElementById('game-word');
+                wordEl.style.color = isCorrect ? 'var(--success-green)' : 'var(--danger-red)';
+                setTimeout(function() { wordEl.style.color = 'var(--text-main)'; }, 200);
+                setTimeout(function() { floatEl.remove(); }, 800);
+                nextWord();
                 return;
             }
-
             if (state.currentWords.length === 0) return;
-
-            const word = state.currentWords.shift();
-            if (isCorrect) {
-                state.roundData.correct.push(word);
-            } else {
-                state.roundData.wrong.push(word);
-            }
+            var word = state.currentWords.shift();
+            if (isCorrect) state.roundData.correct.push(word);
+            else state.roundData.wrong.push(word);
             nextWord();
         }
 
-        // --- 結算與微調 ---
         function endGameplay() {
-            const isGroup = state.mode === 'group';
-            const isPureScore = state.currentTheme === '純計分';
-
-            document.getElementById('summary-group-name').innerText = isGroup ? state.groups[state.currentGroupIndex].name : "玩家";
-            
-            if (isPureScore) {
-                document.getElementById('summary-pure-score-info').style.display = 'block';
-                document.getElementById('summary-word-list').style.display = 'none';
-                updatePureScoreDisplay();
+            if (state.timer) { clearInterval(state.timer); state.timer = null; }
+            var isPure = (state.currentTheme === '純計分');
+            var gName = state.mode === 'group' ? state.groups[state.currentGroupIndex].name : "結算中";
+            document.getElementById('summary-group-name').innerText = gName;
+            if (isPure) {
+                document.getElementById('summary-pure-score-info').style.display = 'flex';
+                document.getElementById('summary-word-list-area').style.display = 'none';
+                document.getElementById('summary-pure-score-val').innerText = state.roundData.scoreDelta;
             } else {
                 document.getElementById('summary-pure-score-info').style.display = 'none';
-                document.getElementById('summary-word-list').style.display = 'flex';
-                document.getElementById('summary-word-list').style.flexDirection = 'column';
+                document.getElementById('summary-word-list-area').style.display = 'block';
                 renderSummaryWords();
             }
-
             showScreen('screen-summary');
         }
 
         function renderSummaryWords() {
-            const correctContainer = document.getElementById('list-correct');
-            const wrongContainer = document.getElementById('list-wrong');
-            
-            correctContainer.innerHTML = state.roundData.correct.map(w => 
-                `<span class="word-chip chip-correct" onclick="toggleWordStatus('${w}', true)">${w}</span>`
-            ).join('');
-            
-            wrongContainer.innerHTML = state.roundData.wrong.map(w => 
-                `<span class="word-chip chip-wrong" onclick="toggleWordStatus('${w}', false)">${w}</span>`
-            ).join('');
-            
+            var cList = document.getElementById('list-correct'), wList = document.getElementById('list-wrong');
+            cList.innerHTML = ''; wList.innerHTML = '';
+            state.roundData.correct.forEach(w => {
+                var span = document.createElement('span'); span.className = 'score-pill';
+                span.style.background = 'var(--success-green)'; span.style.color = '#000'; span.innerText = w;
+                span.onclick = () => toggleSummaryWord(w, true); cList.appendChild(span);
+            });
+            state.roundData.wrong.forEach(w => {
+                var span = document.createElement('span'); span.className = 'score-pill';
+                span.style.background = 'var(--danger-red)'; span.style.color = '#fff'; span.innerText = w;
+                span.onclick = () => toggleSummaryWord(w, false); wList.appendChild(span);
+            });
             document.getElementById('summary-correct-count').innerText = state.roundData.correct.length;
             document.getElementById('summary-wrong-count').innerText = state.roundData.wrong.length;
         }
 
-        function toggleWordStatus(word, isCurrentlyCorrect) {
-            if (isCurrentlyCorrect) {
-                state.roundData.correct = state.roundData.correct.filter(w => w !== word);
+        function toggleSummaryWord(word, wasCorrect) {
+            if (wasCorrect) {
+                var idx = state.roundData.correct.indexOf(word);
+                if (idx > -1) state.roundData.correct.splice(idx, 1);
                 state.roundData.wrong.push(word);
             } else {
-                state.roundData.wrong = state.roundData.wrong.filter(w => w !== word);
+                var idx2 = state.roundData.wrong.indexOf(word);
+                if (idx2 > -1) state.roundData.wrong.splice(idx2, 1);
                 state.roundData.correct.push(word);
             }
             renderSummaryWords();
         }
 
-        function adjustPureScore(amount) {
-            state.roundData.scoreDelta += amount;
-            updatePureScoreDisplay();
-        }
-
-        function updatePureScoreDisplay() {
-            const valEl = document.getElementById('summary-pure-score-val');
-            valEl.innerText = state.roundData.scoreDelta;
-            valEl.style.color = state.roundData.scoreDelta >= 0 ? "var(--success)" : "var(--danger)";
+        function adjustPureScore(val) {
+            state.roundData.scoreDelta += val;
+            document.getElementById('summary-pure-score-val').innerText = state.roundData.scoreDelta;
         }
 
         function confirmSummary() {
             if (state.mode === 'group') {
-                if (state.currentTheme === '純計分') {
-                    state.groups[state.currentGroupIndex].score += state.roundData.scoreDelta;
-                } else {
-                    // 一般模式：答對幾題得幾分
-                    state.groups[state.currentGroupIndex].score += state.roundData.correct.length;
-                }
+                var finalScore = state.currentTheme === '純計分' ? state.roundData.scoreDelta : state.roundData.correct.length;
+                state.groups[state.currentGroupIndex].score += finalScore;
                 state.currentGroupIndex = (state.currentGroupIndex + 1) % state.groups.length;
                 updateScoreboards();
-                updateCurrentTurnText();
-                showScreen('screen-game-settings');
-            } else {
-                showScreen('screen-game-settings');
             }
+            showScreen('screen-game-settings');
         }
+
+        function backToHome() {
+            if (state.mode === 'quick') {
+                if (state.timer) { clearInterval(state.timer); state.timer = null; }
+                showScreen('screen-home');
+            } else { document.getElementById('custom-confirm-overlay').style.display = 'flex'; }
+        }
+
+        function closeConfirmModal() { document.getElementById('custom-confirm-overlay').style.display = 'none'; }
+        function executeBackToHome() { closeConfirmModal(); if (state.timer) { clearInterval(state.timer); state.timer = null; } showScreen('screen-home'); }
     </script>
 </body>
 </html>
