@@ -184,7 +184,7 @@
 
         h2 { font-size: 28px; text-align: center; margin: 0 0 20px 0; font-weight: 700; color: var(--accent-gold); flex-shrink: 0; }
 
-        /* 🔘 統一按鈕樣式 */
+        /* 🔘 統一按鈕樣式 (玻璃質感化) */
         .action-btn {
             flex: 1; /* 使按鈕在 row 中平分寬度 */
             width: 100%;
@@ -197,19 +197,36 @@
             font-weight: 700;
             border: none;
             cursor: pointer;
-            transition: 0.2s;
+            transition: 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
             flex-shrink: 0;
             text-decoration: none;
+            /* 毛玻璃效果 */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255, 255, 255, 0.1);
         }
-        .btn-gold { background: var(--accent-gold); color: #000; }
-        .btn-purple { background: var(--accent-purple); color: #000; }
-        .btn-outline { background: transparent; border: 2px solid var(--glass-border); color: #fff; }
+        .btn-gold { 
+            background: rgba(251, 191, 36, 0.15); 
+            border: 1px solid rgba(251, 191, 36, 0.3); 
+            color: var(--accent-gold); 
+        }
+        .btn-purple { 
+            background: rgba(192, 132, 252, 0.15); 
+            border: 1px solid rgba(192, 132, 252, 0.3); 
+            color: var(--accent-purple); 
+        }
+        .btn-outline { 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            color: #fff; 
+        }
 
         .action-btn:active {
-            transform: scale(0.97);
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
 
-        /* 首頁專用按鈕 */
+        /* 首頁專用按鈕 (玻璃質感化) */
         .home-btn {
             width: 100%;
             padding: 16px 20px;
@@ -217,21 +234,29 @@
             text-align: left;
             border: none;
             cursor: pointer;
-            transition: 0.2s;
+            transition: 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
             display: flex;
             flex-direction: column;
             justify-content: center;
+            /* 毛玻璃效果 */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255, 255, 255, 0.1);
         }
         .home-btn-primary {
-            background: linear-gradient(135deg, var(--accent-purple), #9333ea);
-            color: black;
-            box-shadow: 0 15px 30px rgba(192, 132, 252, 0.3);
+            background: linear-gradient(135deg, rgba(192, 132, 252, 0.2), rgba(147, 51, 234, 0.2));
+            border: 1px solid rgba(192, 132, 252, 0.3);
+            color: var(--text-main);
         }
         .home-btn-secondary {
             background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             color: white;
-            backdrop-filter: blur(10px);
+        }
+
+        .home-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
         }
 
         /* 🏆 即時戰況 Scoreboard */
@@ -275,8 +300,23 @@
         .word-text { font-size: 64px; font-weight: 900; text-align: center; margin-bottom: 40px; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
 
         .game-footer-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; flex-shrink: 0; padding-bottom: 10px; }
-        /* 遊戲中答題按鈕縮小 */
-        .btn-game-action { height: 64px; border-radius: 20px; font-size: 18px; font-weight: 800; border: none; cursor: pointer; }
+        /* 遊戲中答題按鈕縮小 (玻璃質感化) */
+        .btn-game-action { 
+            height: 64px; 
+            border-radius: 20px; 
+            font-size: 18px; 
+            font-weight: 800; 
+            border: none; 
+            cursor: pointer; 
+            transition: 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        }
+        .btn-game-action:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
 
         input, select {
             width: 100%; padding: 16px; border-radius: 16px; border: 1px solid var(--glass-border);
@@ -338,6 +378,44 @@
             0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
             100% { transform: translate(-50%, -150px) scale(1.5); opacity: 0; }
         }
+
+        /* ✅ 加入右上角固定樣式 */
+        #screen-gameplay {
+            position: relative;
+        }
+
+        .game-back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 50;
+
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+
+            color: white;
+            font-size: 18px;
+            font-weight: 700;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            cursor: pointer;
+            transition: 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .game-back-btn:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        }
     </style>
 </head>
 <body>
@@ -351,7 +429,32 @@
             <p style="margin-bottom:30px; font-size:16px; line-height: 1.5;">確定要結束遊戲並回到首頁嗎？<br><span style="color:var(--danger-red); font-size:14px;">所有進度將不被保留。</span></p>
             <div style="display:flex; gap:15px;">
                 <button class="action-btn btn-outline" style="flex:1;" onclick="closeConfirmModal()">取消</button>
-                <button class="action-btn" style="flex:1; background:var(--danger-red); color:white; border:none;" onclick="executeBackToHome()">確定結束</button>
+                <button class="action-btn" style="flex:1; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger-red);" onclick="executeBackToHome()">確定結束</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameplay-exit-overlay" style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(10px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 10001;
+        padding: 20px;
+    ">
+        <div class="glass-panel" style="max-width:320px; text-align:center;">
+            <h3 style="margin-top:0; color:var(--accent-gold);">放棄本回合？</h3>
+            <p style="font-size:14px; opacity:0.8;">
+                若返回設定畫面，<br>
+                本回合的進度將不被計算。
+            </p>
+            <div style="display:flex; gap:12px; margin-top:20px;">
+                <button class="action-btn btn-outline" onclick="closeGameplayExit()">取消</button>
+                <button class="action-btn" style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger-red);"
+                    onclick="confirmGameplayExit()">確定返回</button>
             </div>
         </div>
     </div>
@@ -367,7 +470,7 @@
             <div class="home-top" style="padding:40px 30px 20px 30px;">
                 <p style="letter-spacing:6px; opacity:0.4; font-size:12px;">WELCOME TO</p>
 
-                <h1 class="home-logo" style="margin-bottom:15px;">派對動物</h1>
+                <h1 class="home-logo" style="margin-bottom:15px;">派 對 動 物</h1>
 
                 <p style="opacity:0.6; font-size:14px; max-width:260px; line-height:1.6;">
                     鴨鴨鴨 鴨鴨<br>
@@ -375,9 +478,9 @@
                 </p>
 
                 <div style="
-                    margin-top:25px;
-                    width:60px;
-                    height:4px;
+                    margin-top:15px;
+                    width:300px;
+                    height:2px;
                     border-radius:3px;
                     background:linear-gradient(90deg,var(--accent-gold),var(--accent-purple));
                     box-shadow:0 0 20px var(--accent-purple);
@@ -389,8 +492,8 @@
                 display:flex;
                 flex-direction:column;
                 gap:18px;
-                margin-top:auto;
-                margin-bottom:40px;
+                margin-top:10px;
+                margin-bottom:200px;
             ">
 
                 <button onclick="startGroupSetup()" class="home-btn home-btn-secondary">
@@ -510,13 +613,14 @@
 
             <div class="fixed-bottom-btns">
                 <button class="action-btn btn-outline" onclick="backToHome()">回到首頁</button>
-                <button class="action-btn btn-purple"
-                    style="background:var(--success-green);"
+                <button class="action-btn"
+                    style="background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.3); color:var(--success-green);"
                     onclick="startGameplay()">開始遊戲</button>
             </div>
         </div>
 
         <div id="screen-gameplay" class="screen">
+            <button class="game-back-btn" onclick="openGameplayExitConfirm()">✕</button>
             <div id="gameplay-scoreboard" class="live-scoreboard"></div>
             <div class="game-display">
                 <div class="timer-text" id="game-timer">01:00</div>
@@ -524,8 +628,8 @@
                 <button id="btn-end-pure" class="action-btn btn-gold" style="display:none; width: 150px; flex:none;" onclick="endGameplay()">結束統計</button>
             </div>
             <div class="game-footer-btns" id="game-action-buttons">
-                <button class="btn-game-action" style="background:var(--danger-red); color:white;" onclick="recordAnswer(false)">答錯 / Pass</button>
-                <button class="btn-game-action" style="background:var(--success-green); color:black;" onclick="recordAnswer(true)">答對</button>
+                <button class="btn-game-action" style="background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger-red);" onclick="recordAnswer(false)">答錯 / Pass</button>
+                <button class="btn-game-action" style="background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.3); color:var(--success-green);" onclick="recordAnswer(true)">答對</button>
             </div>
         </div>
 
@@ -546,9 +650,9 @@
                 <div id="summary-pure-score-info" style="display:none; height:100%; flex-direction:column; justify-content:center; align-items:center;">
                     <p style="color:var(--accent-gold); font-size:18px; margin-top:0;">手動微調本回合得分</p>
                     <div style="display:flex; justify-content:center; align-items:center; gap:35px; margin-top:15px;">
-                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background: var(--danger-red); color:white; font-size:36px; display:flex; align-items:center; justify-content:center; border:none;" onclick="adjustPureScore(-1)">-</button>
+                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.3); color:var(--danger-red); font-size:36px; display:flex; align-items:center; justify-content:center;" onclick="adjustPureScore(-1)">-</button>
                         <span id="summary-pure-score-val" style="font-size:72px; font-weight:900; min-width:80px; text-align:center; text-shadow:0 0 15px rgba(255,255,255,0.3);">0</span>
-                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background: var(--success-green); color:black; font-size:36px; display:flex; align-items:center; justify-content:center; border:none;" onclick="adjustPureScore(1)">+</button>
+                        <button class="btn-game-action" style="width:75px; height:75px; border-radius:50%; background:rgba(34, 197, 94, 0.15); border:1px solid rgba(34, 197, 94, 0.3); color:var(--success-green); font-size:36px; display:flex; align-items:center; justify-content:center;" onclick="adjustPureScore(1)">+</button>
                     </div>
                 </div>
             </div>
@@ -983,6 +1087,25 @@
 
         function closeConfirmModal() { document.getElementById('custom-confirm-overlay').style.display = 'none'; }
         function executeBackToHome() { closeConfirmModal(); if (state.timer) { clearInterval(state.timer); state.timer = null; } showScreen('screen-home'); }
+
+        /* ✅ 四、加入 JS 控制邏輯 */
+        function openGameplayExitConfirm() {
+            document.getElementById('gameplay-exit-overlay').style.display = 'flex';
+        }
+
+        function closeGameplayExit() {
+            document.getElementById('gameplay-exit-overlay').style.display = 'none';
+        }
+
+        function confirmGameplayExit() {
+            if (state.timer) {
+                clearInterval(state.timer);
+                state.timer = null;
+            }
+
+            closeGameplayExit();
+            showScreen('screen-game-settings');
+        }
     </script>
 </body>
 </html>
